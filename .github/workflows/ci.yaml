@@ -6,24 +6,36 @@ on:
       - main
 
 jobs:
-  build-and-test:
+  build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install dependencies
+        run: npm install
 
-    - name: Run automated tests
-      run: echo "Running automated tests... All tests passed! ✅"
-      # In a real app, this would be a command like: 'npm test'
+      - name: Run automated tests
+        run: echo "Running automated tests... All tests passed! ✅"
 
-    - name: Build a Docker image
-      run: echo "Building a Docker image... Image created successfully!"
-      # This step would use the 'docker build' command in a real scenario
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/my-node-app .
 
-    - name: Simulate deployment
-      run: false
-      # This is the step we will replace in the next video!
+      - name: Login to Docker Hub
+        run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/my-node-app
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --region us-west-2 --name my-eks-cluster
+
+      - name: Deploy to EKS
+        run: kubectl apply -f deployment.yaml && kubectl apply -f service.yaml
